@@ -48,7 +48,7 @@ The package needs to invoke the following commands to init flakey device:
 
 * [dmsetup.8][dmsetup.8] - low level logical volume management
 
-* [mkfs.8][mkfs.8] - mke2fs - create an ext2/ext3/ext4 filesystem
+* [mkfs.8][mkfs.8] - build a Linux filesystem
 
 All of them are supported by most of linux distributions.
 

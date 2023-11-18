@@ -87,6 +87,45 @@ $ go test -c -o /tmp/test ./datacorruption/boltdb && sudo /tmp/test -test.v
 FAIL
 ```
 
+* What if power failure after pulling image? from contrib [datacorruption-containerd]
+
+It's reproducer for [container not starting in few nodes "standard_init_linux.go:219: exec user process caused: exec format error"](https://github.com/containerd/containerd/issues/5854).
+
+```bash
+$ cd contrib
+
+$ go test -c -o /tmp/test ./datacorruption/containerd && sudo /tmp/test -test.v
+=== RUN   TestPowerFailureAfterPullImage
+    main_test.go:86: Start to run containerd
+    main_test.go:90: Wait for ready
+    main_test.go:94: Pulling ghcr.io/containerd/alpine:3.14.0
+    main_test.go:139: crictl (args: [-r /tmp/TestPowerFailureAfterPullImage4290336617/001/root/run/containerd/containerd.sock pull ghcr.io/containerd/alpine:3.14.0]) output:
+         I1118 17:56:47.063177 2514950 util_unix.go:104] "Using this endpoint is deprecated, please consider using full URL format" endpoint="/tmp/TestPowerFailureAfterPullImage4290336617/001/root/run/containerd/containerd.sock" URL="unix:///tmp/TestPowerFailureAfterPullImage4290336617/001/root/run/containerd/containerd.sock"
+        Image is up to date for sha256:d4ff818577bc193b309b355b02ebc9220427090057b54a59e73b79bdfe139b83
+
+
+    main_test.go:97: Power failure
+    main_test.go:102: Restarting containerd
+    main_test.go:107: Wait for ready
+    main_test.go:114: Mounting image ghcr.io/containerd/alpine:3.14.0 on /tmp/TestPowerFailureAfterPullImage4290336617/003
+    main_test.go:139: ctr (args: [-a /tmp/TestPowerFailureAfterPullImage4290336617/001/root/run/containerd/containerd.sock -n k8s.io image mount ghcr.io/containerd/alpine:3.14.0 /tmp/TestPowerFailureAfterPullImage4290336617/003]) output:
+         sha256:72e830a4dff5f0d5225cdc0a320e85ab1ce06ea5673acfe8d83a7645cbd0e9cf
+        /tmp/TestPowerFailureAfterPullImage4290336617/003
+
+
+    main_test.go:117: Run busybox
+    main_test.go:138:
+                Error Trace:    github.com/fuweid/go-dmflakey/contrib/datacorruption/containerd/main_test.go:138
+                                                        github.com/fuweid/go-dmflakey/contrib/datacorruption/containerd/main_test.go:118
+                Error:          Received unexpected error:
+                                fork/exec /tmp/TestPowerFailureAfterPullImage4290336617/003/bin/busybox: exec format error
+                Test:           TestPowerFailureAfterPullImage
+                Messages:       /tmp/TestPowerFailureAfterPullImage4290336617/003/bin/busybox (args: []) output:
+
+--- FAIL: TestPowerFailureAfterPullImage (7.92s)
+FAIL
+```
+
 ### Requirements
 
 The package needs to invoke the following commands to init flakey device:
@@ -101,3 +140,4 @@ All of them are supported by most of linux distributions.
 [dmsetup.8]: <https://man7.org/linux/man-pages/man8/dmsetup.8.html>
 [mkfs.8]: <https://man7.org/linux/man-pages/man8/mkfs.8.html>
 [datacorruption-boltdb]: ./contrib/datacorruption/boltdb
+[datacorruption-containerd]: ./contrib/datacorruption/containerd

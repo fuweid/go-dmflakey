@@ -139,5 +139,5 @@ All of them are supported by most of linux distributions.
 [dm-flakey]: <https://docs.kernel.org/admin-guide/device-mapper/dm-flakey.html>
 [dmsetup.8]: <https://man7.org/linux/man-pages/man8/dmsetup.8.html>
 [mkfs.8]: <https://man7.org/linux/man-pages/man8/mkfs.8.html>
-[datacorruption-boltdb]: ./contrib/datacorruption/boltdb
-[datacorruption-containerd]: ./contrib/datacorruption/containerd
+[datacorruption-boltdb]: ./contrib/datacorruption/boltdb/main_test.go#L42
+[datacorruption-containerd]: ./contrib/datacorruption/containerd/main_test.go#L45

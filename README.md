@@ -42,7 +42,7 @@ exec.Command(args[0], args[1:]).Run()
 // check the file
 ```
 
-* How to cause data loss during bbolt-bench? from contrib [datacorruption-boltdb][datacorruption-boltdb]
+* How to cause data loss during `bbolt bench`? from contrib [datacorruption-boltdb]
 
 ```bash
 $ cd contrib
@@ -100,4 +100,4 @@ All of them are supported by most of linux distributions.
 [dm-flakey]: <https://docs.kernel.org/admin-guide/device-mapper/dm-flakey.html>
 [dmsetup.8]: <https://man7.org/linux/man-pages/man8/dmsetup.8.html>
 [mkfs.8]: <https://man7.org/linux/man-pages/man8/mkfs.8.html>
-[datacorruption-boltdb][datacorruption-boltdb]: ./contrib/datacorruption/boltdb
+[datacorruption-boltdb]: ./contrib/datacorruption/boltdb

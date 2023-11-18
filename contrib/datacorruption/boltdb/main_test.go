@@ -89,17 +89,24 @@ func TestDropWritesDuringBench(t *testing.T) {
 	t.Logf("Let bbolt-bench run with DropWrites mode for 3 seconds")
 	time.Sleep(3 * time.Second)
 
-	t.Logf("Start to allow all the write IOs for 2 seconds")
-	require.NoError(t, flakey.AllowWrites())
-	time.Sleep(2 * time.Second)
-
 	t.Logf("Kill the bbolt process and simulate power failure")
 	cmd.Process.Kill()
 	require.Error(t, <-waitCh)
 	require.NoError(t, utils.SimulatePowerFailure(flakey, root))
 
-	t.Logf("Invoke bbolt check to verify data")
-	output, err := exec.Command("bbolt", "check", dbPath).CombinedOutput()
+	t.Logf("Start to allow all the write IOs for 2 seconds")
+	require.NoError(t, flakey.AllowWrites())
+	time.Sleep(2 * time.Second)
+
+	dbFile := "/tmp/boltdb"
+	o1, err := exec.Command("rm", "-f", dbFile).CombinedOutput()
+	require.NoError(t, err, "remove %q failed: %s", dbFile, string(o1))
+
+	o2, err := exec.Command("cp", dbPath, dbFile).CombinedOutput()
+	require.NoError(t, err, "cp db file from %q to %q failed: %s", dbPath, dbFile, string(o2))
+
+	t.Logf("Invoke bbolt check to verify data: %q", dbFile)
+	output, err := exec.Command("bbolt", "check", dbFile).CombinedOutput()
 	require.NoError(t, err, "bbolt check output: %s", string(output))
 }
 
@@ -116,7 +123,7 @@ func initEmptyBoltdb(t *testing.T, dbPath string) {
 	require.NoError(t, err)
 	defer dbFd.Close()
 
-	require.NoError(t, dbFd.Truncate(128*1024*1024))
+	//require.NoError(t, dbFd.Truncate(128*1024*1024))
 	require.NoError(t, dbFd.Sync())
 }
 

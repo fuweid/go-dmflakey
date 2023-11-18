@@ -39,7 +39,8 @@ func newFlakeyDevice(flakeyDevice, loopDevice string, interval time.Duration) er
 func reloadFlakeyDevice(flakeyDevice string, syncFS bool, table string) (retErr error) {
 	args := []string{"suspend", "--nolockfs", flakeyDevice}
 	if syncFS {
-		args[1] = ""
+		args[1] = flakeyDevice
+		args = args[:len(args)-1]
 	}
 
 	output, err := exec.Command("dmsetup", args...).CombinedOutput()

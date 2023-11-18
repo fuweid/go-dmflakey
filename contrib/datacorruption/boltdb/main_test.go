@@ -96,7 +96,7 @@ func TestDropWritesDuringBench(t *testing.T) {
 	t.Logf("Kill the bbolt process and simulate power failure")
 	cmd.Process.Kill()
 	require.Error(t, <-waitCh)
-	require.NoError(t, simulatePowerFailure(flakey, root))
+	require.NoError(t, utils.SimulatePowerFailure(flakey, root))
 
 	t.Logf("Invoke bbolt check to verify data")
 	output, err := exec.Command("bbolt", "check", dbPath).CombinedOutput()
@@ -118,21 +118,6 @@ func initEmptyBoltdb(t *testing.T, dbPath string) {
 
 	require.NoError(t, dbFd.Truncate(128*1024*1024))
 	require.NoError(t, dbFd.Sync())
-}
-
-func simulatePowerFailure(flakey dmflakey.Flakey, root string) error {
-	if err := flakey.DropWrites(); err != nil {
-		return err
-	}
-
-	if err := utils.Unmount(root); err != nil {
-		return err
-	}
-
-	if err := flakey.AllowWrites(); err != nil {
-		return err
-	}
-	return utils.Mount(root, flakey.DevicePath(), "")
 }
 
 func initFlakeyDevice(t *testing.T, fsType dmflakey.FSType) (_ dmflakey.Flakey, root string) {

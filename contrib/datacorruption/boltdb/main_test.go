@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -76,8 +77,14 @@ func TestDropWritesDuringBench(t *testing.T) {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmdCh <- cmd
 
+		var b bytes.Buffer
+		cmd.Stdout = &b
+		cmd.Stderr = &b
+
 		require.NoError(t, cmd.Start(), "start bbolt (args: %v)", args[1:])
-		waitCh <- cmd.Wait()
+		werr := cmd.Wait()
+		t.Logf("####### bbolt output: \n %s", b.String())
+		waitCh <- werr
 	}()
 
 	cmd := <-cmdCh
@@ -89,14 +96,14 @@ func TestDropWritesDuringBench(t *testing.T) {
 	t.Logf("Let bbolt-bench run with DropWrites mode for 3 seconds")
 	time.Sleep(3 * time.Second)
 
+	t.Logf("Start to allow all the write IOs for 2 seconds")
+	require.NoError(t, flakey.AllowWrites())
+	time.Sleep(2 * time.Second)
+
 	t.Logf("Kill the bbolt process and simulate power failure")
 	cmd.Process.Kill()
 	require.Error(t, <-waitCh)
 	require.NoError(t, utils.SimulatePowerFailure(flakey, root))
-
-	t.Logf("Start to allow all the write IOs for 2 seconds")
-	require.NoError(t, flakey.AllowWrites())
-	time.Sleep(2 * time.Second)
 
 	dbFile := "/tmp/boltdb"
 	o1, err := exec.Command("rm", "-f", dbFile).CombinedOutput()

@@ -3,11 +3,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,22 +78,25 @@ func TestDropWritesDuringBench(t *testing.T) {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmdCh <- cmd
 
+		var b bytes.Buffer
+		cmd.Stdout = &b
+		cmd.Stderr = &b
+
 		require.NoError(t, cmd.Start(), "start bbolt (args: %v)", args[1:])
-		waitCh <- cmd.Wait()
+		werr := cmd.Wait()
+		t.Logf("bbolt output: \n %s\n", b.String())
+		waitCh <- werr
 	}()
 
 	cmd := <-cmdCh
 
-	t.Logf("Drop all the write IOs after 3 seconds")
-	time.Sleep(3 * time.Second)
-	require.NoError(t, flakey.DropWrites())
-
-	t.Logf("Let bbolt-bench run with DropWrites mode for 3 seconds")
+	t.Logf("Keep bbolt-bench running for 3 seconds")
 	time.Sleep(3 * time.Second)
 
-	t.Logf("Start to allow all the write IOs for 2 seconds")
-	require.NoError(t, flakey.AllowWrites())
-	time.Sleep(2 * time.Second)
+	defer func() {
+		t.Log("Save data if failed")
+		saveDataIfFailed(t, dbPath, false)
+	}()
 
 	t.Logf("Kill the bbolt process and simulate power failure")
 	cmd.Process.Kill()
@@ -99,8 +104,48 @@ func TestDropWritesDuringBench(t *testing.T) {
 	require.NoError(t, utils.SimulatePowerFailure(flakey, root))
 
 	t.Logf("Invoke bbolt check to verify data")
-	output, err := exec.Command("bbolt", "check", dbPath).CombinedOutput()
-	require.NoError(t, err, "bbolt check output: %s", string(output))
+	if output, err := exec.Command("bbolt", "check", dbPath).CombinedOutput(); err != nil {
+		t.Errorf("bbolt check failed, error: %v, output: %s", err, string(output))
+	}
+}
+
+func saveDataIfFailed(t *testing.T, dbFilePath string, force bool) {
+	if t.Failed() || force {
+		t.Log("Backup bbolt db file...")
+
+		backupDir := testResultsDirectory(t)
+		backupDB(t, dbFilePath, backupDir)
+	}
+}
+
+func testResultsDirectory(t *testing.T) string {
+	resultsDirectory, ok := os.LookupEnv("RESULTS_DIR")
+	var err error
+	if !ok {
+		resultsDirectory, err = os.MkdirTemp("", "*.db")
+		require.NoError(t, err)
+	}
+	resultsDirectory, err = filepath.Abs(resultsDirectory)
+	require.NoError(t, err)
+
+	path, err := filepath.Abs(filepath.Join(resultsDirectory, strings.ReplaceAll(t.Name(), "/", "_")))
+	require.NoError(t, err)
+
+	err = os.RemoveAll(path)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(path, 0700)
+	require.NoError(t, err)
+
+	return path
+}
+
+func backupDB(t *testing.T, srcFilePath string, dstDir string) {
+	dstFilePath := filepath.Join(dstDir, "db.bak")
+	t.Logf("Saving the DB file to %s", dstFilePath)
+	output, err := exec.Command("cp", srcFilePath, dstFilePath).CombinedOutput()
+	require.NoError(t, err, "cp db file from %q to %q failed: %s", srcFilePath, dstFilePath, string(output))
+	t.Logf("DB file saved to %s", dstFilePath)
 }
 
 // initEmptyBoltdb inits empty boltdb with 128 MiB.

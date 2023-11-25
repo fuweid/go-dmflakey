@@ -46,6 +46,9 @@ type Flakey interface {
 	// DevicePath returns the flakey device path.
 	DevicePath() string
 
+	// Filesystem returns filesystem's type.
+	Filesystem() FSType
+
 	// AllowWrites allows write I/O.
 	AllowWrites(opts ...FeatOpt) error
 
@@ -143,6 +146,11 @@ type flakey struct {
 // DevicePath returns the flakey device path.
 func (f *flakey) DevicePath() string {
 	return fmt.Sprintf("/dev/mapper/%s", f.flakeyDevice)
+}
+
+// Filesystem returns filesystem's type.
+func (f *flakey) Filesystem() FSType {
+	return f.fsType
 }
 
 // AllowWrites allows write I/O.
